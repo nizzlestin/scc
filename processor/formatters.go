@@ -334,18 +334,22 @@ func toCSVSummary(input chan *FileJob) string {
 
 func toCSVFiles(input chan *FileJob) string {
 	records := [][]string{}
-
+	projectName := SQLProject
+	commitHash := SQLCommit
 	for result := range input {
 		records = append(records, []string{
+			string("NULL"),
+			projectName,
+			commitHash,
 			result.Language,
 			result.Location,
 			result.Filename,
-			fmt.Sprint(result.Lines),
-			fmt.Sprint(result.Code),
-			fmt.Sprint(result.Comment),
+			fmt.Sprint(result.Bytes),
 			fmt.Sprint(result.Blank),
+			fmt.Sprint(result.Comment),
+			fmt.Sprint(result.Code),
 			fmt.Sprint(result.Complexity),
-			fmt.Sprint(result.Bytes)})
+			SQLDate})
 	}
 
 	// Cater for the common case of adding plural even for those options that don't make sense
@@ -400,24 +404,9 @@ func toCSVFiles(input chan *FileJob) string {
 			return records[i][2] > records[j][2]
 		})
 	}
-
-	recordsEnd := [][]string{{
-		"Language",
-		"Location",
-		"Filename",
-		"Lines",
-		"Code",
-		"Comments",
-		"Blanks",
-		"Complexity",
-		"Bytes"},
-	}
-
-	recordsEnd = append(recordsEnd, records...)
-
 	b := &bytes.Buffer{}
 	w := csv.NewWriter(b)
-	_ = w.WriteAll(recordsEnd)
+	_ = w.WriteAll(records)
 	w.Flush()
 
 	return b.String()
@@ -613,19 +602,28 @@ func toHtmlTable(input chan *FileJob) string {
 func toSqlInsert(input chan *FileJob) string {
 	var str strings.Builder
 	projectName := SQLProject
+	tableName := SQLTable
+	commitHash := SQLCommit
 	if projectName == "" {
 		projectName = strings.Join(DirFilePaths, ",")
 	}
+	if tableName == "" {
+		tableName = "statistic"
+	}
 
-	str.WriteString("\nbegin transaction;")
+	str.WriteString("\ninsert into #{tableName} (`id`, `project`, `commit`, `language`, `file`, `file_dirname`, `file_basename`, `byte`, `blank`, `comment`, `code`, `complexity`) VALUES")
 	count := 0
 	for res := range input {
 		count++
 
 		dir, _ := filepath.Split(res.Location)
-
-		str.WriteString(fmt.Sprintf("\ninsert into t values('%s', '%s', '%s', '%s', '%s', %d, %d, %d, %d, %d);",
-			projectName, res.Language, res.Location, dir, res.Filename, res.Bytes, res.Blank, res.Comment, res.Code, res.Complexity))
+		if commitHash == "" {
+			str.WriteString(fmt.Sprintf("\ninsert into %s values('%s', NULL, '%s', '%s', '%s', '%s', %d, %d, %d, %d, %d);",
+				tableName, projectName, res.Language, res.Location, dir, res.Filename, res.Bytes, res.Blank, res.Comment, res.Code, res.Complexity))
+		} else {
+			str.WriteString(fmt.Sprintf("('%s', '%s', '%s', '%s', '%s', '%s', %d, %d, %d, %d, %d);",
+				tableName, projectName, commitHash, res.Language, res.Location, dir, res.Filename, res.Bytes, res.Blank, res.Comment, res.Code, res.Complexity))
+		}
 
 		// every 1000 files commit and start a new transaction to avoid overloading
 		if count == 1000 {
@@ -640,10 +638,11 @@ func toSqlInsert(input chan *FileJob) string {
 
 	currentTime := time.Now()
 	es := float64(makeTimestampMilli()-startTimeMilli) * 0.001
-	str.WriteString("\nbegin transaction;")
-	str.WriteString(fmt.Sprintf("\ninsert into metadata values('%s', '%s', %f);", currentTime.Format("2006-01-02 15:04:05"), projectName, es))
-	str.WriteString("\ncommit;")
-
+	if SQLMetadata {
+		str.WriteString("\nbegin transaction;")
+		str.WriteString(fmt.Sprintf("\ninsert into metadata values('%s', '%s', %f);", currentTime.Format("2006-01-02 15:04:05"), projectName, es))
+		str.WriteString("\ncommit;")
+	}
 	return str.String()
 }
 

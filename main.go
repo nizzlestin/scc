@@ -285,6 +285,13 @@ func main() {
 		"verbose output",
 	)
 	flags.BoolVarP(
+		&processor.SQLMetadata,
+		"metadata",
+		"m",
+		false,
+		"verbose output",
+	)
+	flags.BoolVarP(
 		&processor.More,
 		"wide",
 		"w",
@@ -330,6 +337,24 @@ func main() {
 	flags.StringVar(
 		&processor.SQLProject,
 		"sql-project",
+		"",
+		"use supplied name as the project identifier for the current run. Only valid with the --format sql or sql-insert option",
+	)
+	flags.StringVar(
+		&processor.SQLDate,
+		"sql-date",
+		"",
+		"use supplied name as the project identifier for the current run. Only valid with the --format sql or sql-insert option",
+	)
+	flags.StringVar(
+		&processor.SQLCommit,
+		"sql-commit",
+		"",
+		"use supplied name as the project identifier for the current run. Only valid with the --format sql or sql-insert option",
+	)
+	flags.StringVar(
+		&processor.SQLTable,
+		"sql-table",
 		"",
 		"use supplied name as the project identifier for the current run. Only valid with the --format sql or sql-insert option",
 	)

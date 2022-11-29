@@ -32,6 +32,8 @@ var Languages = false
 // Verbose enables verbose logging output
 var Verbose = false
 
+var SQLMetadata = false
+
 // Debug enables debug logging output
 var Debug = false
 
@@ -115,6 +117,11 @@ var FormatMulti = ""
 
 // SQLProject is used to store the name for the SQL insert formats but is optional
 var SQLProject = ""
+
+var SQLCommit = ""
+var SQLDate = ""
+
+var SQLTable = ""
 
 // RemapUnknown allows remapping of unknown files with a string to search the content for
 var RemapUnknown = ""
